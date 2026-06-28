@@ -1,0 +1,14 @@
+# Applies to every machine in the cluster
+cluster_admin_user: hpcadmin
+cluster_timezone: America/Chicago   # change to your timezone
+
+common_packages:
+  - vim
+  - htop
+  - tmux
+  - wget
+  - curl
+  - git
+  - net-tools
+  - bash-completion
+  - chrony

@@ -1,0 +1,98 @@
+---
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+  tags: hostname
+
+- name: Configure /etc/hosts for cluster nodes
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    block: |
+      192.168.1.197 pi
+      192.168.1.228 node01
+      192.168.1.200 node02
+      192.168.1.235 node03
+    marker: "# {mark} ANSIBLE MANAGED CLUSTER HOSTS"
+  tags: hosts
+
+- name: Fix Pi hostname in /etc/hostname (Raspbian)
+  ansible.builtin.copy:
+    content: "pi\n"
+    dest: /etc/hostname
+  when: inventory_hostname == 'pi'
+  tags: hostname
+
+- name: Install common packages
+  ansible.builtin.package:
+    name: "{{ common_packages }}"
+    state: present
+  tags: packages
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ cluster_timezone }}"
+  tags: timezone
+
+- name: Enable and start chrony (NTP time sync)
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true
+  tags: ntp
+
+- name: Create cluster admin user
+  ansible.builtin.user:
+    name: "{{ cluster_admin_user }}"
+    shell: /bin/bash
+    groups: wheel
+    append: true
+    create_home: true
+    state: present
+  tags: users
+
+- name: Allow admin user passwordless sudo
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ cluster_admin_user }}"
+    content: "{{ cluster_admin_user }} ALL=(ALL) NOPASSWD: ALL\n"
+    owner: root
+    group: root
+    mode: '0440'
+    validate: /usr/sbin/visudo -cf %s
+  tags: users
+
+- name: Add your SSH key to the admin user
+  ansible.posix.authorized_key:
+    user: "{{ cluster_admin_user }}"
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+  tags: ssh
+
+- name: Harden SSH config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    backup: true
+  loop:
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: '^#?X11Forwarding', line: 'X11Forwarding no' }
+    - { regexp: '^#?MaxAuthTries', line: 'MaxAuthTries 3' }
+  notify: Restart sshd
+  tags: ssh
+
+- name: Ensure firewalld is running
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+  tags: firewall
+
+- name: Allow SSH through firewall
+  ansible.posix.firewalld:
+    service: ssh
+    permanent: true
+    state: enabled
+    immediate: true
+  tags: firewall
