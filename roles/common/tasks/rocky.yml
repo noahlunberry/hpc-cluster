@@ -1,0 +1,12 @@
+---
+- name: Enable EPEL repository
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+
+- name: Install Rocky-specific packages
+  ansible.builtin.dnf:
+    name:
+      - dnf-utils
+      - policycoreutils-python-utils
+    state: present

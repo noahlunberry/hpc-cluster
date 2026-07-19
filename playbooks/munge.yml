@@ -1,0 +1,25 @@
+---
+- name: Fetch munge key from the Pi
+  hosts: pi
+  become: true
+  tasks:
+    - ansible.builtin.fetch:
+        src: /etc/munge/munge.key
+        dest: files/munge.key
+        flat: true
+
+- name: Distribute munge key and start munged
+  hosts: compute
+  become: true
+  tasks:
+    - ansible.builtin.copy:
+        src: files/munge.key
+        dest: /etc/munge/munge.key
+        owner: munge
+        group: munge
+        mode: "0400"
+
+    - ansible.builtin.systemd:
+        name: munge
+        enabled: true
+        state: restarted

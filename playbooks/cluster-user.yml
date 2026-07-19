@@ -1,0 +1,22 @@
+---
+- name: Assign uids and gids on each machine
+  hosts: all
+  become: true
+  vars:
+    cluster_user: hpc
+    cluster_id: 1500
+
+  tasks:
+    - name: assign group ids
+      ansible.builtin.group:
+        name: "{{ cluster_user }}"
+        gid: "{{ cluster_id }}"
+
+    - name: assign user ids (and add them to groups
+      ansible.builtin.user:
+        name: "{{ cluster_user }}"
+        uid: "{{ cluster_id }}"
+        group: "{{ cluster_user }}"
+        shell: /bin/bash
+        create_home: true
+        state: present

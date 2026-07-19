@@ -1,4 +1,16 @@
 ---
+- name: Rocky Linux specific setup
+  ansible.builtin.include_tasks: rocky.yml
+  when: ansible_facts['os_family'] == "RedHat"
+  tags: packages
+
+- name: Debian/Raspbian specific setup
+  ansible.builtin.include_tasks: debian.yml
+  when: ansible_facts['os_family'] == "Debian"
+  tags: packages
+
+
+
 - name: Set hostname
   ansible.builtin.hostname:
     name: "{{ inventory_hostname }}"

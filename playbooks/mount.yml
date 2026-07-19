@@ -1,0 +1,20 @@
+---
+- name: Mount /clusterfs from teh Pi on all the compute nodes
+  hosts: compute
+  become: true
+  tasks:
+    - name: install stuff on them
+      ansible.builtin.dnf:
+        name: nfs-utils
+        state: present
+    - name: mount point
+      ansible.builtin.file:
+        path: /clusterfs
+        state: directory
+    - name: mount and persistn in fstab
+      ansible.posix.mount:
+        path: /clusterfs
+        src: "pi:/clusterfs"
+        fstype: nfs
+        opts: defaults,_netdev
+        state: mounted 
